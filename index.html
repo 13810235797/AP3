@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>AP3 光照与纹理场景 — 张容畅 2406100329 软件241</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #0b0e14;
+               font-family: "Microsoft YaHei", "Segoe UI", sans-serif; color: #ddd; }
+  #glcanvas { width: 100vw; height: 100vh; display: block; }
+  #panel {
+    position: absolute; top: 12px; left: 12px; width: 272px; max-height: calc(100vh - 24px);
+    overflow-y: auto;
+    background: rgba(20, 24, 34, 0.9); border: 1px solid #333a4d;
+    border-radius: 8px; padding: 12px 14px; font-size: 13px; line-height: 1.6;
+    backdrop-filter: blur(4px);
+  }
+  #panel h3 { margin: 0 0 6px; font-size: 14px; color: #ffd24a; }
+  #panel .sec { margin-top: 10px; padding-top: 8px; border-top: 1px dashed #333a4d;
+                font-size: 11px; color: #8aa0c0; letter-spacing: 1px; }
+  #panel label { display: block; margin-top: 5px; }
+  #panel input[type=range] { width: 100%; }
+  #panel .row { display: flex; gap: 8px; }
+  #panel .row label { flex: 1; }
+  #panel .btns { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+  #panel button {
+    flex: 1 1 45px; background: #2a3350; color: #cfe0ff; border: 1px solid #44507a;
+    border-radius: 5px; padding: 4px 6px; font-size: 12px; cursor: pointer;
+  }
+  #panel button:hover { background: #3a4670; }
+  #panel button.active { background: #5a6a3a; border-color: #8aa050; color: #e8ffc8; }
+  #sel-name { color: #ffd24a; font-weight: bold; }
+  #hud {
+    position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+    background: rgba(20,24,34,0.8); padding: 6px 16px; border-radius: 16px;
+    font-size: 13px; color: #9fd8e0;
+  }
+  #tips { position: absolute; bottom: 12px; right: 12px; font-size: 12px; color: #888;
+          text-align: right; line-height: 1.6; }
+</style>
+</head>
+<body>
+<canvas id="glcanvas"></canvas>
+
+<div id="panel">
+  <h3>AP3 · 光照与纹理场景</h3>
+
+  <div class="sec">① 全局光照（Phong 三分量）</div>
+  <label>环境光强度 <span id="ui-ambient-val">0.25</span>
+    <input id="ui-ambient" type="range" min="0" max="0.8" step="0.01" value="0.25">
+  </label>
+  <label><input id="ui-use-ambient" type="checkbox" checked> 环境分量 (Ambient)</label>
+  <label><input id="ui-use-diffuse" type="checkbox" checked> 漫反射分量 (Diffuse)</label>
+  <label><input id="ui-use-specular" type="checkbox" checked> 镜面分量 (Specular)</label>
+  <label><input id="ui-dir-on" type="checkbox" checked> 方向光</label>
+  <label><input id="ui-point-on" type="checkbox" checked> 点光源</label>
+
+  <div class="sec">② 阴影贴图（两遍渲染）</div>
+  <label><input id="ui-shadow-on" type="checkbox" checked> 启用阴影</label>
+  <label>深度偏移 Bias <span id="ui-bias-val">0.004</span>
+    <input id="ui-bias" type="range" min="0" max="0.012" step="0.0005" value="0.004">
+  </label>
+  <label>PCF 采样半径 <span id="ui-pcf-val">1.0</span>
+    <input id="ui-pcf" type="range" min="0" max="3" step="0.1" value="1.0">
+  </label>
+  <label>阴影相机范围 <span id="ui-half-val">7.0</span>
+    <input id="ui-half" type="range" min="3" max="10" step="0.5" value="7.0">
+  </label>
+
+  <div class="sec">③ 选中物体材质（点击场景物体拾取）</div>
+  <div>当前选中：<span id="sel-name">无（点击物体）</span></div>
+  <div class="row">
+    <label>R <span id="ui-r-val">0.75</span><input id="ui-r" type="range" min="0" max="1" step="0.01" value="0.75"></label>
+    <label>G <span id="ui-g-val">0.18</span><input id="ui-g" type="range" min="0" max="1" step="0.01" value="0.18"></label>
+    <label>B <span id="ui-b-val">0.18</span><input id="ui-b" type="range" min="0" max="1" step="0.01" value="0.18"></label>
+  </div>
+  <label>镜面强度 <span id="ui-spec-val">0.50</span>
+    <input id="ui-spec" type="range" min="0" max="1" step="0.01" value="0.50">
+  </label>
+  <label>高光指数 <span id="ui-shine-val">32</span>
+    <input id="ui-shine" type="range" min="1" max="128" step="1" value="32">
+  </label>
+  <label>透明度 <span id="ui-opacity-val">1.00</span>
+    <input id="ui-opacity" type="range" min="0.1" max="1" step="0.01" value="1.00">
+  </label>
+  <div class="btns" id="shading-btns">
+    <button data-model="0" class="active">Phong</button>
+    <button data-model="1">Blinn-Phong</button>
+    <button data-model="2">Toon</button>
+  </div>
+
+  <div class="sec">④ 显示</div>
+  <label><input id="ui-sky" type="checkbox" checked> 天空盒（环境贴图背景）</label>
+  <label><input id="ui-bump" type="checkbox" checked> 凹凸贴图（E1 对比开关）</label>
+  <label><input id="ui-wire" type="checkbox"> 线框模式</label>
+  <div class="btns">
+    <button id="view-reset" class="reset">复位视角</button>
+  </div>
+</div>
+
+<div id="hud">拖拽旋转 · 滚轮缩放 · 点击物体拾取调参</div>
+<div id="tips">
+  点击物体：选中并切换材质面板<br>
+  三分量勾选：对比环境 / 漫反射 / 镜面
+</div>
+
+<script src="Common/MV.js"></script>
+<script src="Common/initShaders.js"></script>
+<script src="Common/webgl-utils.js"></script>
+<script src="js/shaders.js?v=ap3b"></script>
+<script src="js/geometry.js?v=ap3b"></script>
+<script src="js/textures.js?v=ap3b"></script>
+<script src="js/scene.js?v=ap3b"></script>
+<script src="js/shadow.js?v=ap3b"></script>
+<script src="js/pick.js?v=ap3b"></script>
+<script src="js/camera.js?v=ap3b"></script>
+<script src="js/ui.js?v=ap3b"></script>
+<script src="js/main.js?v=ap3b"></script>
+</body>
+</html>
+

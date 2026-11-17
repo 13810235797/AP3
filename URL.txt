@@ -1,0 +1,21 @@
+公网地址（GitHub Pages，部署后生效）：
+https://13810235797.github.io/ap3-lighting-texture/
+
+录屏地址：
+（现场演示，未单独录制；如需提交录屏，将视频放入 screenshots/ 后在此填写链接）
+
+------------------------------------------------------------
+部署步骤（GitHub Pages）：
+1. 在 GitHub 新建仓库 ap3-lighting-texture（Public）。
+2. 将本目录全部文件（index.html、Common/、js/、screenshots/、README.md）推送至 main 分支：
+     git init
+     git add .
+     git commit -m "AP3 光照与纹理场景"
+     git remote add origin https://github.com/13810235797/ap3-lighting-texture.git
+     git push -u origin main
+3. 仓库 Settings → Pages → Source 选择 main 分支、根目录 /(root)，保存。
+4. 等待约 1 分钟后访问上方公网地址，确认页面可直接打开、场景可交互。
+
+本地运行（不经过公网）：
+     python -m http.server 8123
+   浏览器打开 http://localhost:8123/index.html
